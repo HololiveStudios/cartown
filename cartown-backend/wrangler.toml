@@ -1,0 +1,8 @@
+name = "cartown-backend"
+main = "src/index.ts"
+compatibility_date = "2024-03-20"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cartown-db"
+database_id = "79f040e9-2507-4cff-b7e5-16fe8e991d4f"

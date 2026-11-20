@@ -1,0 +1,29 @@
+{
+  "player": {
+    "id": "usr_001",
+    "username": "Piloto #1",
+    "level": 1,
+    "xp": 120,
+    "coins": 1500,
+    "cash": 10,
+    "garageValue": 12000,
+    "workBays": [
+      {
+        "id": 1,
+        "status": "IDLE",
+        "currentJob": null,
+        "startTime": null,
+        "finishTime": null,
+        "expireTime": null
+      }
+    ],
+    "cars": [
+      {
+        "instanceId": "car_inst_01",
+        "modelId": "car_hatch_98",
+        "colorHex": "0xef4444",
+        "equippedWheels": "wheel_stock"
+      }
+    ]
+  }
+}

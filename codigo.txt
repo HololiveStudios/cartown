@@ -1,0 +1,361 @@
+Para facilitar o seu acesso e download de todo o material que pesquisamos e estruturamos, criei o documento **`car-town-especificacao-tecnica-e-mvp-v2.pdf`**, que já está disponível no seu painel **Studio** ao lado.
+
+O PDF contém a **pesquisa funcional completa**, a **arquitetura técnica em camadas 2D** e o **manual detalhado das mecânicas do MVP** (garagem, elevadores, semáforo, reação em ms e conta-giros de RPM com *Perfect Shift*).
+
+---
+
+### Código Completo do Protótipo Funcional (`index.html`)
+
+Abaixo está o código-fonte completo e auto-contido do MVP em **Phaser 3 + HTML/Tailwind CSS**. Você pode copiar todo o código do bloco abaixo, colar em um arquivo de texto, salvá-lo como **`index.html`** no seu computador e abri-lo diretamente em qualquer navegador para testar a garagem e a pista de arrancada:
+
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car Town — MVP Protótipo Funcional</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phaser 3 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.0/dist/phaser.min.js"></script>
+  <style>
+    body { user-select: none; -webkit-user-select: none; }
+    @keyframes pulse-green {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 0.3; }
+    }
+    .pulse-zone { animation: pulse-green 1s infinite; }
+  </style>
+</head>
+<body class="bg-slate-950 text-white overflow-hidden font-sans">
+
+  <!-- CANVAS DO PHASER (Z-INDEX 10) -->
+  <div id="game-container" class="absolute inset-0 z-10 w-full h-full"></div>
+
+  <!-- INTERFACE HTML TAILWIND OVERLAY (Z-INDEX 20) -->
+  <div id="ui-layer" class="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-4">
+
+    <!-- 1. HUD SUPERIOR -->
+    <header class="flex flex-wrap justify-between items-center bg-slate-900/90 backdrop-blur border border-slate-800 p-3 rounded-2xl shadow-2xl pointer-events-auto max-w-5xl mx-auto w-full gap-4">
+      <div class="flex items-center gap-4">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-500 flex items-center justify-center font-black border-2 border-white/20 text-lg shadow-md">
+          <span id="level-display">1</span>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 font-medium">Piloto de Garagem</div>
+          <div class="text-sm font-bold text-white flex items-center gap-2">
+            Jogador #1 <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-md border border-blue-500/30">Nível <span id="level-badge">1</span></span>
+          </div>
+          <div class="w-36 bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700 mt-1">
+            <div id="xp-bar" class="bg-gradient-to-r from-blue-500 to-indigo-400 h-full w-[0%] transition-all duration-300"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 bg-slate-950/80 px-3.5 py-1.5 rounded-xl border border-amber-500/30">
+          <span class="text-xl">🪙</span>
+          <div class="flex flex-col">
+            <span class="text-[10px] text-amber-500 font-bold uppercase tracking-wider">Moedas</span>
+            <span id="coins-display" class="font-extrabold text-amber-400 text-sm">1,500</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 bg-slate-950/80 px-3.5 py-1.5 rounded-xl border border-blue-500/30">
+          <span class="text-xl">💎</span>
+          <div class="flex flex-col">
+            <span class="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Cash</span>
+            <span id="cash-display" class="font-extrabold text-blue-300 text-sm">10</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 bg-slate-950/80 px-3.5 py-1.5 rounded-xl border border-purple-500/30">
+          <span class="text-xl">🏎️</span>
+          <div class="flex flex-col">
+            <span class="text-[10px] text-purple-400 font-bold uppercase tracking-wider">Garage Value</span>
+            <span id="gv-display" class="font-extrabold text-purple-300 text-sm">\$12,000</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- NOTIFICAÇÃO CENTRAL -->
+    <div id="notification-banner" class="hidden pointer-events-none self-center bg-slate-900/95 border border-slate-700 px-6 py-3 rounded-2xl shadow-2xl backdrop-blur text-center transition-all">
+      <div id="notif-title" class="font-black text-lg"></div>
+      <div id="notif-subtitle" class="text-xs text-slate-300"></div>
+    </div>
+
+    <!-- 2. PAINEL INFERIOR -->
+    <footer id="main-footer" class="flex justify-center gap-4 pointer-events-auto mb-2">
+      <button id="btn-open-customizer" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-6 rounded-2xl shadow-xl transform active:scale-95 transition-all border border-blue-400/30 flex items-center gap-2">
+        🎨 Customizar Cor
+      </button>
+
+      <button id="btn-toggle-scene" class="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-black py-3 px-8 rounded-2xl shadow-xl transform active:scale-95 transition-all border border-red-400/30 flex items-center gap-2 text-lg">
+        🚦 Ir Correr (Arrancada)
+      </button>
+    </footer>
+
+    <!-- PAINEL DE RPM -->
+    <div id="rpm-container" class="hidden pointer-events-auto absolute bottom-6 right-6 bg-slate-900/95 border border-slate-800 p-5 rounded-2xl shadow-2xl flex flex-col items-center w-80 backdrop-blur">
+      <div class="flex justify-between w-full mb-1 text-xs text-slate-400 font-bold">
+        <span>MARCHA: <span id="gear-display" class="text-2xl text-amber-400 font-black ml-1">1</span></span>
+        <span id="shift-feedback" class="text-xs font-black text-slate-300 bg-slate-800 px-2.5 py-1 rounded-lg">LARGADA</span>
+      </div>
+
+      <div class="relative w-full h-9 bg-slate-950 rounded-xl overflow-hidden border-2 border-slate-800 my-2">
+        <div class="absolute top-0 bottom-0 left-[81%] w-[12%] bg-green-500/40 border-x-2 border-green-400 pulse-zone"></div>
+        <div class="absolute top-0 bottom-0 right-0 w-[7%] bg-red-600/60"></div>
+        <div id="rpm-bar" class="h-full bg-gradient-to-r from-blue-500 via-amber-400 to-red-500 w-[12%] transition-all duration-75"></div>
+      </div>
+
+      <div class="text-xs font-mono text-slate-400">
+        <span id="rpm-text" class="text-xl font-black text-white">1000</span> RPM
+      </div>
+
+      <button id="btn-shift-input" class="mt-3 w-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black py-3 rounded-xl shadow-lg active:scale-95 transition-all text-sm uppercase tracking-wide">
+        ⚙️ Trocar Marcha (ESPAÇO)
+      </button>
+    </div>
+
+    <!-- MODAL DE CUSTOMIZAÇÃO -->
+    <div id="customizer-modal" class="hidden pointer-events-auto absolute inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl relative">
+        <h3 class="text-xl font-extrabold text-white mb-2 flex items-center gap-2">🎨 Pintura da Lataria</h3>
+        <p class="text-xs text-slate-400 mb-5">Escolha a cor da lataria (Tinting 2D):</p>
+        
+        <div class="grid grid-cols-4 gap-3 mb-6">
+          <button onclick="window.setCarColor(0xef4444)" class="w-14 h-14 rounded-2xl bg-red-500 border-2 border-white/20 hover:scale-110 active:scale-95 transition-all shadow-lg"></button>
+          <button onclick="window.setCarColor(0x3b82f6)" class="w-14 h-14 rounded-2xl bg-blue-500 border-2 border-white/20 hover:scale-110 active:scale-95 transition-all shadow-lg"></button>
+          <button onclick="window.setCarColor(0x22c55e)" class="w-14 h-14 rounded-2xl bg-green-500 border-2 border-white/20 hover:scale-110 active:scale-95 transition-all shadow-lg"></button>
+          <button onclick="window.setCarColor(0xeab308)" class="w-14 h-14 rounded-2xl bg-yellow-500 border-2 border-white/20 hover:scale-110 active:scale-95 transition-all shadow-lg"></button>
+          <button onclick="window.setCarColor(0xa855f7)" class="w-14 h-14 rounded-2xl bg-purple-500 border-2 border-white/20 hover:scale-110 active:scale-95 transition-all shadow-lg"></button>
+          <button onclick="window.setCarColor(0xec4899)" class="w-14 h-14 rounded-2xl bg-pink-500 border-2 border-white/20 hover:scale-110 active:scale-95 transition-all shadow-lg"></button>
+          <button onclick="window.setCarColor(0xf97316)" class="w-14 h-14 rounded-2xl bg-orange-500 border-2 border-white/20 hover:scale-110 active:scale-95 transition-all shadow-lg"></button>
+          <button onclick="window.setCarColor(0x64748b)" class="w-14 h-14 rounded-2xl bg-slate-500 border-2 border-white/20 hover:scale-110 active:scale-95 transition-all shadow-lg"></button>
+        </div>
+
+        <button id="btn-close-modal" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-2xl transition-colors">Concluir</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const EventBus = new Phaser.Events.EventEmitter();
+
+    const PlayerState = {
+      coins: 1500, cash: 10, xp: 120, level: 1, garageValue: 12000, carColor: 0xef4444,
+      addRewards(coinsGained, xpGained) {
+        this.coins += coinsGained; this.xp += xpGained;
+        const req = this.level * 300;
+        if (this.xp >= req) {
+          this.level++; this.xp -= req; this.cash += 2;
+          EventBus.emit('SHOW_NOTIFICATION', { title: '🎉 SUBIU DE NÍVEL!', subtitle: `Você alcançou o Nível ${this.level} (+2 Cash)` });
+        }
+        EventBus.emit('PLAYER_STATE_UPDATED', this);
+      }
+    };
+
+    class GarageScene extends Phaser.Scene {
+      constructor() { super('GarageScene'); }
+      create() {
+        const w = this.scale.width, h = this.scale.height;
+        this.add.rectangle(w / 2, h / 2, w, h, 0x1e293b);
+        const g = this.add.graphics(); g.lineStyle(1, 0x334155, 0.5);
+        for (let i = -w; i < w * 2; i += 60) { g.lineBetween(i, 0, i + h, h); g.lineBetween(i, h, i + h, 0); }
+
+        this.workBay = this.add.container(w / 2 - 180, h / 2);
+        const bayBase = this.add.rectangle(0, 0, 160, 100, 0x0f172a).setStrokeStyle(3, 0x3b82f6);
+        this.add.text(w / 2 - 180, h / 2 - 35, 'ELEVADOR #1', { fontSize: '11px', fontStyle: 'bold', color: '#60a5fa' }).setOrigin(0.5);
+        this.bayStatus = this.add.text(w / 2 - 180, h / 2, 'CLIQUE P/ SERVIÇO\n(Lavar Carro)', { fontSize: '10px', align: 'center', color: '#94a3b8' }).setOrigin(0.5);
+        bayBase.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.startWorkBayJob());
+
+        this.carContainer = this.add.container(w / 2 + 100, h / 2);
+        const shadow = this.add.ellipse(0, 25, 150, 40, 0x000000, 0.4);
+        this.carBody = this.add.rectangle(0, 0, 140, 60, 0xffffff).setStrokeStyle(3, 0x0f172a);
+        this.carBody.setTint(PlayerState.carColor);
+        const w1 = this.add.circle(-45, 25, 12, 0x020617).setStrokeStyle(2, 0x94a3b8);
+        const w2 = this.add.circle(45, 25, 12, 0x020617).setStrokeStyle(2, 0x94a3b8);
+        const glass = this.add.rectangle(10, -10, 60, 25, 0x38bdf8, 0.6);
+        this.carContainer.add([shadow, this.carBody, w1, w2, glass]);
+
+        EventBus.on('CHANGE_CAR_COLOR', (color) => {
+          PlayerState.carColor = color;
+          this.carBody.setTint(color);
+        });
+        this.jobActive = false;
+      }
+
+      startWorkBayJob() {
+        if (this.jobActive) return;
+        this.jobActive = true;
+        this.bayStatus.setText('SERVIÇO EM ANDAMENTO...\n(10s)').setColor('#eab308');
+        this.time.delayedCall(10000, () => {
+          this.jobActive = false;
+          this.bayStatus.setText('✅ CONCLUÍDO!\n+150 Moedas | +30 XP').setColor('#22c55e');
+          PlayerState.addRewards(150, 30);
+        });
+      }
+    }
+
+    class DragRaceScene extends Phaser.Scene {
+      constructor() { super('DragRaceScene'); }
+      create() {
+        const w = this.scale.width, h = this.scale.height;
+        this.add.rectangle(w / 2, h / 2, w, h, 0x090d16);
+        this.add.rectangle(w / 2, h - 140, w, 180, 0x1e293b);
+        this.add.rectangle(w - 120, h - 140, 20, 180, 0xffffff);
+
+        const cx = w / 2;
+        this.add.rectangle(cx, 160, 70, 200, 0x0f172a).setStrokeStyle(3, 0x334155);
+        this.y1 = this.add.circle(cx, 90, 18, 0x334155);
+        this.y2 = this.add.circle(cx, 135, 18, 0x334155);
+        this.y3 = this.add.circle(cx, 180, 18, 0x334155);
+        this.green = this.add.circle(cx, 225, 20, 0x334155);
+
+        this.playerCar = this.add.container(120, h - 140);
+        const body = this.add.rectangle(0, 0, 130, 50, 0xffffff).setStrokeStyle(3, 0x000000);
+        body.setTint(PlayerState.carColor);
+        const w1 = this.add.circle(-40, 22, 11, 0x000000);
+        const w2 = this.add.circle(40, 22, 11, 0x000000);
+        this.playerCar.add([body, w1, w2]);
+
+        this.raceState = 'IDLE'; this.greenTime = 0; this.currentRPM = 1000; this.currentGear = 1;
+        this.input.keyboard.on('keydown-SPACE', () => this.handleAction());
+        EventBus.on('PLAYER_SHIFT_INPUT', () => this.handleAction());
+
+        this.startRaceSequence();
+      }
+
+      startRaceSequence() {
+        this.raceState = 'COUNTDOWN';
+        EventBus.emit('SHOW_NOTIFICATION', { title: 'PREPARE-SE...', subtitle: 'Aguarde o sinal verde para arrancar' });
+        this.time.delayedCall(600, () => { if (this.raceState==='COUNTDOWN') this.y1.setFillStyle(0xeab308); });
+        this.time.delayedCall(1200, () => { if (this.raceState==='COUNTDOWN') this.y2.setFillStyle(0xeab308); });
+        this.time.delayedCall(1800, () => { if (this.raceState==='COUNTDOWN') this.y3.setFillStyle(0xeab308); });
+        this.time.delayedCall(2400, () => {
+          if (this.raceState === 'COUNTDOWN') {
+            this.raceState = 'GREEN'; this.green.setFillStyle(0x22c55e); this.greenTime = this.time.now;
+            EventBus.emit('SHOW_NOTIFICATION', { title: '🚦 ACELERE! (GO!)', subtitle: 'Pressione Espaço para arrancar' });
+          }
+        });
+      }
+
+      handleAction() {
+        if (this.raceState === 'COUNTDOWN') {
+          this.raceState = 'FOUL';
+          this.y1.setFillStyle(0xef4444); this.y2.setFillStyle(0xef4444); this.y3.setFillStyle(0xef4444);
+          EventBus.emit('SHOW_NOTIFICATION', { title: '❌ QUEIMOU A LARGADA!', subtitle: 'Você acelerou antes do sinal verde' });
+          return;
+        }
+        if (this.raceState === 'GREEN') {
+          this.raceState = 'RACING';
+          const rx = ((this.time.now - this.greenTime) / 1000).toFixed(3);
+          EventBus.emit('SHOW_NOTIFICATION', { title: `🟢 LARGADA! (${rx}s)`, subtitle: 'Troque de marcha na zona verde' });
+          document.getElementById('rpm-container').classList.remove('hidden');
+          return;
+        }
+        if (this.raceState === 'RACING') this.shiftGear();
+      }
+
+      shiftGear() {
+        if (this.currentGear >= 4) return;
+        const rpm = this.currentRPM;
+        let q = 'normal', boost = 1.0, msg = 'TROCA NORMAL';
+        if (rpm >= 6500 && rpm <= 7500) { q = 'perfect'; boost = 1.35; msg = '⚡ PERFECT SHIFT!'; }
+        else if (rpm < 6500) { msg = '⚠️ TROCOU CEDO'; boost = 0.8; }
+        else { msg = '❌ TROCA TARDIA'; boost = 0.7; }
+
+        this.currentGear++; this.currentRPM = 3800; this.playerCar.x += 60 * boost;
+        EventBus.emit('SHIFT_FEEDBACK', { gear: this.currentGear, feedback: msg, quality: q });
+        if (this.currentGear === 4 || this.playerCar.x > this.scale.width - 200) this.finishRace();
+      }
+
+      update(time, delta) {
+        if (this.raceState !== 'RACING') return;
+        this.currentRPM += (30 / this.currentGear);
+        if (this.currentRPM >= 8000) this.currentRPM = 7800;
+        this.playerCar.x += (this.currentGear * 60 + this.currentRPM / 80) * (delta / 1000);
+        EventBus.emit('UPDATE_RPM_UI', { rpm: Math.floor(this.currentRPM), gear: this.currentGear });
+        if (this.playerCar.x >= this.scale.width - 150) this.finishRace();
+      }
+
+      finishRace() {
+        if (this.raceState === 'FINISHED') return;
+        this.raceState = 'FINISHED';
+        document.getElementById('rpm-container').classList.add('hidden');
+        EventBus.emit('SHOW_NOTIFICATION', { title: '🏆 CORRIDA CONCLUÍDA!', subtitle: '+200 Moedas | +50 XP Recompensas' });
+        PlayerState.addRewards(200, 50);
+      }
+    }
+
+    const config = {
+      type: Phaser.AUTO, parent: 'game-container',
+      width: window.innerWidth, height: window.innerHeight,
+      scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
+      backgroundColor: '#020617', scene: [GarageScene, DragRaceScene]
+    };
+
+    const game = new Phaser.Game(config);
+
+    EventBus.on('PLAYER_STATE_UPDATED', (state) => {
+      document.getElementById('coins-display').innerText = state.coins.toLocaleString();
+      document.getElementById('cash-display').innerText = state.cash;
+      document.getElementById('gv-display').innerText = `$${state.garageValue.toLocaleString()}`;
+      document.getElementById('level-display').innerText = state.level;
+      document.getElementById('level-badge').innerText = state.level;
+      document.getElementById('xp-bar').style.width = `${Math.min(100, (state.xp / (state.level * 300)) * 100)}%`;
+    });
+
+    EventBus.on('SHOW_NOTIFICATION', (data) => {
+      document.getElementById('notif-title').innerText = data.title;
+      document.getElementById('notif-subtitle').innerText = data.subtitle;
+      const b = document.getElementById('notification-banner');
+      b.classList.remove('hidden');
+      setTimeout(() => b.classList.add('hidden'), 3500);
+    });
+
+    EventBus.on('UPDATE_RPM_UI', (data) => {
+      document.getElementById('rpm-bar').style.width = `${(data.rpm / 8000) * 100}%`;
+      document.getElementById('rpm-text').innerText = data.rpm;
+      document.getElementById('gear-display').innerText = data.gear;
+    });
+
+    EventBus.on('SHIFT_FEEDBACK', (data) => {
+      const f = document.getElementById('shift-feedback');
+      f.innerText = data.feedback;
+      f.className = data.quality === 'perfect' 
+        ? "text-xs font-black text-green-400 bg-green-950 px-2.5 py-1 rounded-lg border border-green-500/30"
+        : "text-xs font-black text-amber-400 bg-amber-950 px-2.5 py-1 rounded-lg";
+    });
+
+    let currentScene = 'GarageScene';
+    document.getElementById('btn-toggle-scene').addEventListener('click', () => {
+      if (currentScene === 'GarageScene') {
+        currentScene = 'DragRaceScene';
+        game.scene.stop('GarageScene'); game.scene.start('DragRaceScene');
+        document.getElementById('btn-toggle-scene').innerText = '🏠 Voltar para Garagem';
+      } else {
+        currentScene = 'GarageScene';
+        game.scene.stop('DragRaceScene'); game.scene.start('GarageScene');
+        document.getElementById('btn-toggle-scene').innerText = '🚦 Ir Correr (Arrancada)';
+        document.getElementById('rpm-container').classList.add('hidden');
+      }
+    });
+
+    const modal = document.getElementById('customizer-modal');
+    document.getElementById('btn-open-customizer').addEventListener('click', () => modal.classList.remove('hidden'));
+    document.getElementById('btn-close-modal').addEventListener('click', () => modal.classList.add('hidden'));
+
+    window.setCarColor = function(color) { EventBus.emit('CHANGE_CAR_COLOR', color); };
+    document.getElementById('btn-shift-input').addEventListener('click', () => { EventBus.emit('PLAYER_SHIFT_INPUT'); });
+  </script>
+</body>
+</html>
+```
+
+---
+
+🏎️ Quer que a gente monte uma tabela com os dados de **todos os carros e peças da primeira fase** ou prefere definir a **estrutura do servidor/backend** para salvar o progresso dos jogadores em tempo real?
